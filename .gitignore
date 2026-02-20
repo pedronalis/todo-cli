@@ -1,0 +1,14 @@
+# Build artifacts
+bin/
+todo
+
+# Runtime state/data
+data/
+*.bak
+*.bak.*
+smoke*.json
+smoke*.json.*
+
+# OS/editor
+.DS_Store
+*.swp

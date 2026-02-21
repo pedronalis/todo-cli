@@ -1175,7 +1175,8 @@ func (m *Model) View() string {
 	if m.showHelp {
 		rightHint = "Esc/? fechar atalhos"
 	}
-	footerLine := m.renderFooter(statusText, statusStyle, rightHint, frameTotalW)
+	footerCore := m.renderFooter(statusText, statusStyle, rightHint, frameContentW)
+	footerLine := " " + footerCore + " "
 	if frameTotalW < viewW {
 		footerLine = footerLine + strings.Repeat(" ", viewW-frameTotalW)
 	}

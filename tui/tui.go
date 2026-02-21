@@ -1139,10 +1139,16 @@ func (m *Model) View() string {
 	}
 
 	leftW, rightW := m.paneWidths(frameContentW, paneGap)
+	dividerColor := lipgloss.Color("240")
+	if m.focus == focusLists {
+		dividerColor = lipgloss.Color("33")
+	} else if m.focus == focusTasks {
+		dividerColor = lipgloss.Color("70")
+	}
 	split := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		m.renderListsPanel(leftW, innerPaneH),
-		lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("│"),
+		lipgloss.NewStyle().Foreground(dividerColor).Bold(true).Render("│"),
 		m.renderTasksPanel(rightW, innerPaneH),
 	)
 
@@ -1400,10 +1406,18 @@ func (m *Model) contextualHelp() string {
 
 func (m *Model) renderListsPanel(width, height int) string {
 	lists := m.svc.Lists()
-	panelTitle := "Listas"
+	isActive := m.focus == focusLists
+
+	title := panelTitleStyled("Listas", isActive)
+	totalOpen := 0
+	for _, l := range lists {
+		open, _, _ := m.listTaskStats(l.ID)
+		totalOpen += open
+	}
+	meta := lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Render(fmt.Sprintf("%d listas • %d abertas", len(lists), totalOpen))
 
 	lines := make([]string, 0, len(lists)+2)
-	lines = append(lines, panelTitleStyled(panelTitle, m.focus == focusLists))
+	lines = append(lines, lipgloss.JoinHorizontal(lipgloss.Left, title, "  ", meta))
 	if len(lists) == 0 {
 		lines = append(lines, lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Render("Sem listas. Pressione 'a' para criar a primeira."))
 	} else {
@@ -1413,10 +1427,18 @@ func (m *Model) renderListsPanel(width, height int) string {
 				cursor = "▸"
 			}
 			dot := lipgloss.NewStyle().Foreground(colorForName(l.Color)).Render("●")
-			line := fmt.Sprintf("%s %s %s", cursor, dot, l.Name)
+			open, done, _ := m.listTaskStats(l.ID)
+			stats := lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Render(fmt.Sprintf("%d•%d", open, done))
+			line := lipgloss.JoinHorizontal(lipgloss.Left,
+				cursor+" ",
+				dot+" ",
+				l.Name,
+				"  ",
+				stats,
+			)
 			if i == m.listCursor {
 				style := lipgloss.NewStyle().Bold(true)
-				if m.focus == focusLists {
+				if isActive {
 					style = style.Foreground(lipgloss.Color("229"))
 				}
 				line = style.Render(line)
@@ -1427,7 +1449,12 @@ func (m *Model) renderListsPanel(width, height int) string {
 
 	panelStyle := lipgloss.NewStyle().
 		Width(width).
-		Height(height)
+		Height(height).
+		Padding(0, 1).
+		Background(lipgloss.Color("236"))
+	if !isActive {
+		panelStyle = panelStyle.Faint(true)
+	}
 	return panelStyle.Render(strings.Join(lines, "\n"))
 }
 
@@ -1443,13 +1470,21 @@ func (m *Model) renderTasksPanel(width, height int) string {
 	}
 	tasks := m.visibleTasks()
 
+	isActive := m.focus == focusTasks
 	title := "Tarefas"
 	if hasList {
 		title = fmt.Sprintf("Tarefas — %s", list.Name)
 	}
 
+	titleLine := panelTitleStyled(title, isActive)
+	if hasList {
+		open, done, _ := m.listTaskStats(list.ID)
+		meta := lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Render(fmt.Sprintf("%d abertas • %d concluídas", open, done))
+		titleLine = lipgloss.JoinHorizontal(lipgloss.Left, titleLine, "  ", meta)
+	}
+
 	lines := make([]string, 0, len(tasks)+3)
-	lines = append(lines, panelTitleStyled(title, m.focus == focusTasks))
+	lines = append(lines, titleLine)
 
 	if !hasList {
 		lines = append(lines, lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Render("Sem lista ativa. Vá em Listas e pressione 'a'."))
@@ -1467,7 +1502,7 @@ func (m *Model) renderTasksPanel(width, height int) string {
 		for i, t := range tasks {
 			cursor := " "
 			if i == m.taskCursor {
-				cursor = "▸"
+				cursor = "›"
 			}
 			check := "[ ]"
 			if t.Done {
@@ -1488,7 +1523,7 @@ func (m *Model) renderTasksPanel(width, height int) string {
 				cursorStyle = cursorStyle.Bold(true)
 				checkStyle = checkStyle.Bold(true)
 				textStyle = textStyle.Bold(true)
-				if m.focus == focusTasks {
+				if isActive {
 					sel := lipgloss.Color("229")
 					cursorStyle = cursorStyle.Foreground(sel)
 					checkStyle = checkStyle.Foreground(sel)
@@ -1508,20 +1543,29 @@ func (m *Model) renderTasksPanel(width, height int) string {
 
 	panelStyle := lipgloss.NewStyle().
 		Width(width).
-		Height(height)
+		Height(height).
+		Padding(0, 1)
+	if !isActive {
+		panelStyle = panelStyle.Faint(true)
+	}
 	return panelStyle.Render(strings.Join(lines, "\n"))
 }
 
 func (m *Model) renderHistoryPanel(width, height int) string {
 	entries := m.archivedForDisplay()
 	list, hasList := m.activeList()
+	isActive := m.focus == focusTasks
 	title := "Histórico de concluídas"
 	if hasList {
 		title = fmt.Sprintf("Histórico de concluídas — %s", list.Name)
 	}
 
+	titleLine := panelTitleStyled(title, isActive)
+	meta := lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Render(fmt.Sprintf("%d itens", len(entries)))
+	titleLine = lipgloss.JoinHorizontal(lipgloss.Left, titleLine, "  ", meta)
+
 	lines := make([]string, 0, len(entries)+2)
-	lines = append(lines, panelTitleStyled(title, m.focus == focusTasks))
+	lines = append(lines, titleLine)
 	if len(entries) == 0 {
 		emptyMsg := "Histórico vazio. Use 'C' para arquivar concluídas da lista ativa."
 		if hasList {
@@ -1538,7 +1582,7 @@ func (m *Model) renderHistoryPanel(width, height int) string {
 			style := lipgloss.NewStyle().Faint(true)
 			if i == m.historyCursor {
 				style = lipgloss.NewStyle().Bold(true)
-				if m.focus == focusTasks {
+				if isActive {
 					style = style.Foreground(lipgloss.Color("229"))
 				}
 			}
@@ -1548,7 +1592,11 @@ func (m *Model) renderHistoryPanel(width, height int) string {
 
 	panelStyle := lipgloss.NewStyle().
 		Width(width).
-		Height(height)
+		Height(height).
+		Padding(0, 1)
+	if !isActive {
+		panelStyle = panelStyle.Faint(true)
+	}
 	return panelStyle.Render(strings.Join(lines, "\n"))
 }
 
@@ -1560,6 +1608,18 @@ func panelTitleStyled(title string, active bool) string {
 	text := base.Foreground(lipgloss.Color("229")).Render(title)
 	marker := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("10")).Render("*")
 	return lipgloss.JoinHorizontal(lipgloss.Left, text, " ", marker)
+}
+
+func (m *Model) listTaskStats(listID string) (open int, done int, total int) {
+	tasks := m.svc.Tasks(listID)
+	for _, t := range tasks {
+		if t.Done {
+			done++
+		} else {
+			open++
+		}
+	}
+	return open, done, len(tasks)
 }
 
 func matchesFilter(filter model.Filter, done bool) bool {

@@ -1120,13 +1120,13 @@ func (m *Model) View() string {
 	viewW := m.viewportWidth()
 	const paneGap = 1
 	const rightInset = 6
-	outerPaneW := viewW - rightInset
-	if outerPaneW < 40 {
-		outerPaneW = viewW
+	frameW := viewW - rightInset
+	if frameW < 40 {
+		frameW = viewW
 	}
-	innerPaneW := outerPaneW - 2
-	if innerPaneW < 20 {
-		innerPaneW = outerPaneW
+	frameContentW := frameW - 2
+	if frameContentW < 20 {
+		frameContentW = frameW
 	}
 
 	panelH := m.height - 6
@@ -1138,7 +1138,7 @@ func (m *Model) View() string {
 		innerPaneH = 6
 	}
 
-	leftW, rightW := m.paneWidths(innerPaneW, paneGap)
+	leftW, rightW := m.paneWidths(frameContentW, paneGap)
 	split := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		m.renderListsPanel(leftW, innerPaneH),
@@ -1153,12 +1153,13 @@ func (m *Model) View() string {
 	panes := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(frameColor).
-		Width(outerPaneW).
+		Width(frameContentW).
 		Height(panelH).
 		Render(split)
 
-	if outerPaneW < viewW {
-		panes = lipgloss.JoinHorizontal(lipgloss.Top, panes, strings.Repeat(" ", viewW-outerPaneW))
+	frameTotalW := lipgloss.Width(panes)
+	if frameTotalW < viewW {
+		panes = lipgloss.JoinHorizontal(lipgloss.Top, panes, strings.Repeat(" ", viewW-frameTotalW))
 	}
 
 	statusText := m.status
@@ -1174,9 +1175,9 @@ func (m *Model) View() string {
 	if m.showHelp {
 		rightHint = "Esc/? fechar atalhos"
 	}
-	footerLine := m.renderFooter(statusText, statusStyle, rightHint, outerPaneW)
-	if outerPaneW < viewW {
-		footerLine = footerLine + strings.Repeat(" ", viewW-outerPaneW)
+	footerLine := m.renderFooter(statusText, statusStyle, rightHint, frameTotalW)
+	if frameTotalW < viewW {
+		footerLine = footerLine + strings.Repeat(" ", viewW-frameTotalW)
 	}
 
 	promptLine := ""

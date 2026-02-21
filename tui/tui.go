@@ -1145,10 +1145,13 @@ func (m *Model) View() string {
 	} else if m.focus == focusTasks {
 		dividerColor = lipgloss.Color("70")
 	}
+	divider := strings.Repeat("│\n", innerPaneH)
+	divider = strings.TrimSuffix(divider, "\n")
+	divider = lipgloss.NewStyle().Foreground(dividerColor).Bold(true).Render(divider)
 	split := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		m.renderListsPanel(leftW, innerPaneH),
-		lipgloss.NewStyle().Foreground(dividerColor).Bold(true).Render("│"),
+		divider,
 		m.renderTasksPanel(rightW, innerPaneH),
 	)
 
@@ -1450,11 +1453,7 @@ func (m *Model) renderListsPanel(width, height int) string {
 	panelStyle := lipgloss.NewStyle().
 		Width(width).
 		Height(height).
-		Padding(0, 1).
-		Background(lipgloss.Color("236"))
-	if !isActive {
-		panelStyle = panelStyle.Faint(true)
-	}
+		Padding(0, 1)
 	return panelStyle.Render(strings.Join(lines, "\n"))
 }
 
@@ -1545,9 +1544,6 @@ func (m *Model) renderTasksPanel(width, height int) string {
 		Width(width).
 		Height(height).
 		Padding(0, 1)
-	if !isActive {
-		panelStyle = panelStyle.Faint(true)
-	}
 	return panelStyle.Render(strings.Join(lines, "\n"))
 }
 
@@ -1594,9 +1590,6 @@ func (m *Model) renderHistoryPanel(width, height int) string {
 		Width(width).
 		Height(height).
 		Padding(0, 1)
-	if !isActive {
-		panelStyle = panelStyle.Faint(true)
-	}
 	return panelStyle.Render(strings.Join(lines, "\n"))
 }
 

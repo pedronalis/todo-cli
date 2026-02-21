@@ -1174,7 +1174,10 @@ func (m *Model) View() string {
 	if m.showHelp {
 		rightHint = "Esc/? fechar atalhos"
 	}
-	footerLine := m.renderFooter(statusText, statusStyle, rightHint)
+	footerLine := m.renderFooter(statusText, statusStyle, rightHint, outerPaneW)
+	if outerPaneW < viewW {
+		footerLine = footerLine + strings.Repeat(" ", viewW-outerPaneW)
+	}
 
 	promptLine := ""
 	switch m.mode {
@@ -1295,7 +1298,7 @@ func (m *Model) paneWidths(total, gap int) (int, int) {
 	return left, right
 }
 
-func (m *Model) renderFooter(statusText string, statusStyle lipgloss.Style, rightHint string) string {
+func (m *Model) renderFooter(statusText string, statusStyle lipgloss.Style, rightHint string, width int) string {
 	left := strings.TrimSpace(statusText)
 	right := strings.TrimSpace(rightHint)
 	if left == "" {
@@ -1307,7 +1310,6 @@ func (m *Model) renderFooter(statusText string, statusStyle lipgloss.Style, righ
 
 	leftW := utf8.RuneCountInString(left)
 	rightW := utf8.RuneCountInString(right)
-	width := m.viewportWidth()
 	if width <= 0 {
 		width = leftW + rightW + 2
 	}
